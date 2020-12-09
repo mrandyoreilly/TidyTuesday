@@ -1,0 +1,97 @@
+---
+title: "Washington_trails"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+hike_data <- readr::read_rds(url('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-11-24/hike_data.rds'))
+
+```
+
+```{r}
+library(tidyverse)
+library(scales)
+theme_set(theme_light())
+
+```
+
+```{r}
+hike_data %>% 
+  separate(length, into = c("miles", "junk"), sep = " ") %>% 
+  mutate(miles = as.numeric(miles)) %>% 
+  mutate(rating = as.numeric(rating)) %>% 
+  filter(miles <= 50 & miles >= 1 & rating != 0) %>% 
+  ggplot(aes(miles, rating)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+```
+
+```{r}
+hike_data %>% 
+  mutate(rating = as.numeric(rating)) %>% 
+  filter(rating == 0) %>% 
+  view()
+```
+
+```{r}
+hike_data %>% 
+  separate(length, into = c("miles", "junk"), sep = " ") %>% 
+  mutate(miles = as.numeric(miles)) %>% 
+  mutate(rating = as.numeric(rating)) %>% 
+  mutate(gain = as.numeric(gain)) %>% 
+  filter(miles <= 50 & miles >= 1 & rating != 0) %>% 
+  ggplot(aes(gain, rating)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+```
+
+```{r}
+hike_data <- readr::read_rds(url('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-11-24/hike_data.rds'))
+library(tidyverse)
+library(scales)
+theme_set(theme_light())theme_set(theme_light())
+
+hike_features <- hike_data %>% 
+  unnest(features) %>% 
+  group_by(features) %>% 
+  mutate(rating = as.numeric(rating)) %>% 
+  summarise(mean_rating = mean(rating), n=n()) %>% 
+  ungroup() %>% 
+  mutate(features = fct_reorder(features, mean_rating)) %>% 
+  #head(20)
+  ggplot(aes(features, mean_rating)) +
+  geom_point(aes(size = n)) +
+  geom_segment(aes(x=features, xend=features, y=1.5, yend=mean_rating)) +
+  coord_flip() +
+  labs(title = "Dogs are not allowed by the waterfall!",
+  subtitle = "Which features give Washington trails high ratings?",
+       x = "",
+       y = "Average rating (out of 5)",
+  size = "Number of reviews")
+
+hike_features + theme(plot.subtitle = element_text(family = "URWHelvetica"), 
+    panel.grid.major = element_line(linetype = "blank"), 
+    panel.grid.minor = element_line(linetype = "blank"), 
+    axis.title = element_text(family = "URWHelvetica", 
+        size = 8), plot.title = element_text(family = "URWHelvetica"), 
+    panel.background = element_rect(fill = "antiquewhite1"), 
+    plot.background = element_rect(fill = "antiquewhite", 
+        linetype = "dashed")) +labs(x = NULL) + theme(plot.subtitle = element_text(colour = "chartreuse4"), 
+    axis.line = element_line(size = 0), axis.ticks = element_line(size = 0), 
+    axis.text.x = element_text(family = "URWHelvetica", 
+        size = 8), axis.text.y = element_text(family = "URWHelvetica", 
+        size = 8), plot.title = element_text(colour = "chartreuse4"), 
+    panel.background = element_rect(fill = "darkseagreen1"), 
+    plot.background = element_rect(fill = "darkseagreen1")) + theme(panel.grid.major = element_line(size = 0), 
+    panel.grid.minor = element_line(size = 0), 
+    panel.background = element_rect(size = 0), 
+    plot.background = element_rect(size = 0)) + theme(legend.key = element_rect(fill = NA), 
+    legend.background = element_rect(fill = NA))
+
+```
+

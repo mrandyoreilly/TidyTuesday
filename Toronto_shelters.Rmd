@@ -1,0 +1,178 @@
+---
+title: "Toronto_shelters"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+shelters <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-12-01/shelters.csv')
+
+```
+
+```{r}
+library(tidyverse)
+library(scales)
+library(lubridate)
+theme_set(theme_light())
+```
+
+```{r}
+shelters %>% 
+  count(shelter_name, sector, sort = T) %>%
+  head(30) %>% 
+  mutate(shelter_name = fct_reorder(shelter_name, n)) %>% 
+  ggplot(aes(x=shelter_name, y=n, fill = sector)) +
+  geom_col() +
+  coord_flip() +
+  labs(x = "Shelter name",
+       y = "number of entries")
+```
+
+```{r}
+shelters_mean <- shelters %>% 
+  mutate(occupancy_rate = (occupancy/capacity)) %>% 
+  mutate(occupancy_rate = !is.na(occupancy_rate)) %>% 
+  group_by(sector) %>%
+  summarise(mean_occupancy_rate = mean(occupancy_rate)) %>% 
+  ungroup() 
+  
+
+shelters_mean %>% 
+  ggplot(aes(sector, mean_occupancy_rate)) +
+  geom_col() +
+  scale_y_continuous(labels = scales::percent) +
+  labs(y = "Mean occupancy rate")
+  
+  #count(occupancy_rate, sort = T) %>% 
+ 
+#shelters_time %>%   
+ #  ggplot(aes(n, occupancy_date)) +
+  #geom_point()
+```
+
+```{r}
+shelters_boxplot <- shelters %>% 
+  filter(capacity > 0) %>% 
+  mutate(occupancy_rate = (occupancy/capacity))
+  #count(sector, occupancy_rate)
+#na.omit(occupancy_rate)
+  #group_by(sector) %>%
+  #summarise(occupancy_rate, sector)
+  #ungroup() 
+  
+
+shelters_boxplot %>% 
+  ggplot(aes(occupancy_rate, sector)) +
+  geom_boxplot() +
+   scale_x_continuous(labels = scales::percent)
+  
+```
+
+```{r}
+
+shelters_boxplot %>%
+  filter(sector == "Families", occupancy_rate >= 1) %>%
+  select(sector, occupancy_rate) %>% 
+  head() 
+```
+```{r}
+
+shelters %>% 
+    select(occupancy_date, facility_name, sector, occupancy, capacity) %>% 
+    filter(capacity > 0) %>% 
+    mutate(occupancy_rate = (occupancy/capacity)) %>% 
+    na.omit(occupancy_rate) %>% )
+
+shelters_summarised <- shelters %>% 
+  select(occupancy_date, facility_name, sector, occupancy, capacity) %>% 
+  filter(capacity > 0) %>% 
+  mutate(occupancy_rate = (occupancy/capacity)) %>% 
+  na.omit(occupancy_rate) %>% 
+ # mutate(month = lubridate::month(occupancy_date)) %>% 
+ mutate(month = lubridate::floor_date(occupancy_date, unit = "month")) %>% 
+  # mutate(year = lubridate::year(occupancy_date)) %>% 
+#data$year = lubridate::year(data$dates)
+  group_by(sector, month)%>%
+  summarise(monthMean = mean(occupancy_rate))
+  #mutate(date = floor_date(as.Date(df$Date), 'month')
+  #ungroup() %>% 
+#filter(occupancy_rate > 1) %>% 
+  #group_by(sector) %>% 
+  #mutate(mean_occupancy_rate = mean(shelters$occupancy_rate)) %>% 
+  #ungroup() %>% 
+  #mutate(sector = fct_reorder(sector, occupancy_rate))
+
+full_shelter <- 
+    
+```
+
+
+```{r}
+#mutate(shelter_name = fct_lump(shelter_name, 8)) %>% 
+  shelters_summarised %>% 
+  ggplot(aes(month, monthMean, colour = sector)) +
+#geom_point(alpha = 0.3, size = 1) +
+  geom_line() +
+  scale_color_brewer(palette = "Set1")  +
+  scale_y_continuous(labels = scales::percent) +
+  geom_hline(yintercept = 1)
+  
+```
+
+```{r}
+shelters_cleaned <- shelters %>% 
+    select(occupancy_date, facility_name, sector, occupancy, capacity) %>% 
+    filter(capacity > 0) %>% 
+    mutate(occupancy_rate = (occupancy/capacity)) %>% 
+    na.omit(occupancy_rate) %>% 
+    mutate(month = lubridate::floor_date(occupancy_date, unit = "month"))
+   
+  #if_else(occupancy_rate > 1, occupancy_rate, NA_integer_)  %>% 
+  #mutate(overcapacity = case_when(shelters$occupancy_rate > 1)) %>%
+
+shelters_short <- shelters_cleaned %>% 
+  group_by(sector, month)%>%
+  summarise(monthMean = mean(occupancy_rate))
+
+p <- ggplot(data = shelters_short, mapping = aes(x=month, y=monthMean, colour = sector)) +
+  geom_line() +
+  scale_color_brewer(palette = "Set1")  +
+  scale_y_continuous(labels = scales::percent) +
+  geom_hline(yintercept = 1)
+
+p
+  
+```
+
+```{r}
+shelters_overcapacity <- shelters_cleaned %>% 
+  filter(facility_name == "Family Residence - TO")
+
+p + geom_point(data = shelters_overcapacity, mapping = aes(month, occupancy_rate, colour = sector))
+  
+```
+
+```{r}
+shelters_check <- shelters_overcapacity %>%
+  glimpse()
+```
+
+```{r}
+shelters_occupancy <- 
+  shelters_cleaned %>% 
+  select(month, sector, occupancy) %>% 
+  group_by(month) %>% 
+  mutate(mean_occupancy = mean(occupancy))
+```
+
+
+```{r}
+shelters_occupancy %>% 
+  ggplot(data = shelters_occupancy, mapping = aes(x = month, y = mean_occupancy, fill = sector)) +
+  geom_col() +
+  scale_y_continuous(labels = comma)
+```
+
