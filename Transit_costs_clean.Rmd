@@ -1,0 +1,77 @@
+---
+title: "Transport_costs"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+Libraries and general theme
+
+```{r}
+library(tidyverse)
+library(scales)
+library(countrycode)
+library(ggridges)
+
+theme_set(theme_light())
+```
+
+Load data
+
+```{r}
+transit_cost <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-01-05/transit_cost.csv')
+
+```
+
+Data cleaning
+
+```{r}
+transit_cost$tunnel_per <- str_replace(transit_cost$tunnel_per, "%", "")
+
+transit_clean <- transit_cost %>% 
+  mutate(tunnel_per = as.numeric(tunnel_per)) %>% 
+  mutate(real_cost = as.numeric(real_cost)) %>% 
+  filter(!is.na(country)) %>% 
+  mutate(country = countrycode(country, origin = 'iso2c', destination = 'country.name')) 
+  
+transit_clean$country <- replace_na(transit_clean$country, "United Kingdom")
+  
+```
+
+Code for density plot
+
+```{r}
+transit_ridge <- transit_clean %>% 
+  filter(year >= "2000") %>% 
+  group_by(country, year) %>% 
+  mutate(cost_km_mean = mean(cost_km_millions)) %>% 
+  ungroup %>% 
+  mutate(country = fct_other(country, keep = c("United States", "China", "India", "Canada", "France", "Spain"))) %>% 
+  mutate(country= fct_relevel(country, 'Other', after = Inf))
+  
+ridges <- ggplot(data = transit_ridge) +
+  geom_density_ridges(aes(x = cost_km_millions, y = fct_rev(country), fill = country, show.legend = FALSE)) +
+  theme_ridges(center_axis_labels = TRUE, font_size = 24) +
+  scale_fill_brewer(palette = "Dark2") +
+  scale_x_log10(labels = scales::label_dollar(suffix = "m")) +
+  expand_limits(x = 10500) +
+  labs(x = "Cost per kilometre",
+       y = "",
+       title = "The dollar-equivalent cost of building a railway is about \nthe same everywhere . . . except north America" ,
+       subtitle = "Density ridgeplot of building costs per kilometre (log scale)",
+       caption = "Chart by @AndyOReilly10, data from TransitCosts.com") +
+  theme(legend.position = "none") +
+  theme(axis.text.x=element_text (vjust=0)) +
+  theme(plot.caption = element_text(size = 14), 
+        plot.title = element_text(size = 27)) 
+
+ridges
+  
+```
+
+```{r}
+ggsave("Transit_ridge.jpg", dpi=800, height=9, width=16)
+```
+
