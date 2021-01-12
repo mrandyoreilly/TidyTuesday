@@ -1,0 +1,97 @@
+---
+title: "Artworks_Tidy_Tuesday"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+First attempt at a dark mode...
+
+```{r}
+library(tidyverse)
+library(scales)
+library(ggdark)
+dark_mode(.theme = theme_get(), verbose = TRUE,
+  force_geom_invert = FALSE)
+```
+
+
+
+Load in the data...
+
+```{r}
+artwork <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-01-12/artwork.csv')
+artists <- readr::read_csv("https://github.com/tategallery/collection/raw/master/artist_data.csv")
+
+```
+Cleaning
+
+```{r}
+art_short <- artwork %>% 
+  add_count(medium, name = "count_of_medium") %>% 
+  filter(count_of_medium >= 500)  %>% 
+  mutate(area_m = (height * width) / 1000000) %>% 
+  mutate(mean_area_m = area_m/count_of_medium) %>% 
+  mutate(medium = fct_reorder(medium, mean_area_m)) %>% 
+  filter(!is.na(medium)) %>% 
+  filter(!is.na(area_m))
+  
+
+```
+
+First chart, showing mean areas for the top media
+
+```{r}
+art_short %>%
+  group_by(medium) %>% 
+  ggplot(aes(x  = mean_area_m, y = (fct_reorder(medium, mean_area_m)))) +
+  geom_line()
+```
+
+Twitter chart code...
+
+```{r}
+art_short_plot_data <- art_short %>% 
+  filter(medium %in% c("Oil paint on canvas", "Screenprint on paper", "Lithograph on paper", "Graphite on paper", "Watercolour on paper")) %>%
+  filter(year >= 1700)
+  #filter(area_cm >= 10000) %>%
+  
+
+p1  <- art_short_plot_data %>% 
+  ggplot(aes(year, area_m, colour = medium)) +
+  geom_point(alpha = 0.5) +
+  #geom_smooth() +
+  scale_y_log10(labels = function(x) ifelse(x == 0, "0", x)) +
+                #labels = comma_format(), ) +
+  labs(y = (y = expression ("Area of artwork in " ~m^2)),
+       x = "Year of creation", 
+      colour = "Medium of artwork",
+      title = "Seeing the bigger picture? Art acquired by the \nTate has always ranged substantially in size",
+      subtitle = "(The JMW Turner bequest is visible as a distinct area of \nwatercolours and works in graphite around 1800)",
+      caption = "Plot by @andyoreilly10 | Data from the Tate Galleries London")
+       
+p1 + dark_mode() +
+  theme(legend.key = element_rect(fill = "black"), 
+    legend.background = element_rect(fill = "black"), 
+    panel.grid.major = element_line(linetype = "blank"), 
+    panel.grid.minor = element_line(linetype = "blank"), 
+    panel.background = element_rect(fill = "black"),
+    plot.subtitle = element_text(family = "Japan1GothicBBB", 
+    size = 8),
+    axis.title = element_text(size = 10), 
+    axis.text = element_text(size = 7, face = "bold"), 
+    axis.text.x = element_text(family = "Japan1GothicBBB", 
+        size = 7), 
+    axis.text.y = element_text(family = "Japan1GothicBBB"), 
+    plot.title = element_text(family = "Japan1GothicBBB", 
+        size = 14),
+    plot.caption = element_text(hjust = 0, family = "Japan1GothicBBB", size = 6))
+```
+
+```{r}
+ggsave("Tate_artworks.png", width = 15, height = 10, units = "cm", dpi = 300)
+ 
+```
+
