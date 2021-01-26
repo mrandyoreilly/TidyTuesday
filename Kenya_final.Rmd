@@ -1,0 +1,66 @@
+---
+title: "Kenya"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(scales)
+library(sf)
+library(rKenyaCensus)
+theme_set(theme_light())
+```
+
+
+Load in data, clean and pivot longer! Then attach to shape file
+
+```{r}
+
+religions <- rKenyaCensus::V4_T2.30
+ 
+religions_long <- religions %>% 
+  mutate(County = str_to_title(County)) %>% 
+  select(-OtherReligion, -NotStated, -"Don't Know", -OtherReligion, -OtherChristian, -`NoReligion/Atheists`, -Hindu, -Orthodox) %>% 
+  rename(`African Instituted` = AfricanInstituted) %>% 
+  select(-Total) %>% 
+  pivot_longer(cols = 2:7, names_to = "Kreligion", values_to = "Worshippers")
+
+kenya <- rKenyaCensus::KenyaCounties_SHP %>% 
+  st_as_sf() %>% 
+  st_simplify(dTolerance = 1000) %>% 
+  mutate(County = str_to_title(County)) %>% 
+  left_join(religions_long, by = "County") %>% 
+  filter(County != "Kenya") %>%
+  filter(County != "Nairobi City")
+
+```
+
+
+The plot, with geom_sf, viridis and facet wrap
+
+```{r}
+p <- kenya %>%
+  ggplot(aes(fill = Worshippers)) +
+  geom_sf(na.rm = TRUE) +
+  scale_fill_viridis_c(labels=comma_format(), breaks = seq(from = 0, to = 900000, by = 100000)) +
+  facet_wrap(~Kreligion, ncol = 3) +
+  theme(axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks = element_blank()) +
+  labs(title = "Number of worshippers of the principal religions \nand Christian denominations in Kenya",
+       subtitle = "Data by county, from 2019 Kenya Population and Housing Census",
+       caption = "\tPlot by @Andyoreilly10, data from Shel Kariuki's rKenyaCensus package")
+```
+
+```{r}
+p + theme(plot.caption = element_text(size = 8, 
+    hjust = 0), legend.text = element_text(size = 8))
+```
+```{r}
+ggsave("Kenya_religions.png", width = 15, height = 10, units = "cm", dpi = 300)
+```
+
